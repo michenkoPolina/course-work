@@ -1,0 +1,99 @@
+import os
+import openpyxl  # Добавлено для Excel
+from pypdf import PdfReader
+from gigachat import GigaChat
+
+# Подключение к Сбер GigaChat
+AUTH_TOKEN = "MDE5ZmE4ZDItZWU0My03NTc5LWE2M2UtMDJmNGNhMjU2OGU2OjAxY2RiOWFkLWVlNDctNDg2NC1hNzFkLWNhODBkYTZhOWNlOQ=="
+giga = GigaChat(credentials=AUTH_TOKEN, verify_ssl_certs=False)
+
+print("[SUCCESS] Система готова к чтению файлов!")
+
+# 1. Функция чтения PDF (осталась без изменений)
+def load_text_from_pdf(file_path):
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Файл '{file_path}' не найден.")
+    reader = PdfReader(file_path)
+    full_text = ""
+    for page_num, page in enumerate(reader.pages, start=1):
+        page_text = page.extract_text()
+        if page_text:
+            full_text += f"\n[Страница {page_num} файла {file_path}]:\n" + page_text
+    return full_text
+
+# 2. Новая функция чтения Excel
+def load_text_from_excel(file_path):
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Файл '{file_path}' не найден.")
+    workbook = openpyxl.load_workbook(file_path, data_only=True)
+    full_text = ""
+    for sheet in workbook.worksheets:
+        full_text += f"\n[Лист: {sheet.title} файла {file_path}]\n"
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True), start=1):
+            row_data = [str(cell).strip() for cell in row if cell is not None]
+            if row_data:
+                full_text += f"Строка {row_idx}: {' | '.join(row_data)}\n"
+    return full_text
+
+# Имена ваших файлов в папке проекта
+PDF_NAME = "Pravila_bezopasnosti_povedeniya_pri_pozhare.pdf"
+EXCEL_NAME = "data.xlsx"  # Укажите здесь реальное имя вашего Excel-файла
+
+# Инициализируем общую базу знаний
+sobps_database = ""
+
+# Загружаем PDF
+try:
+    sobps_database += load_text_from_pdf(PDF_NAME)
+    print(f"[SUCCESS] PDF-файл '{PDF_NAME}' успешно загружен!")
+except Exception as e:
+    print(f"[ПРЕДУПРЕЖДЕНИЕ] Не удалось прочитать PDF: {e}")
+
+# Загружаем Excel в ту же самую базу данных
+try:
+    sobps_database += load_text_from_excel(EXCEL_NAME)
+    print(f"[SUCCESS] Excel-файл '{EXCEL_NAME}' успешно загружен!")
+except Exception as e:
+    print(f"[ПРЕДУПРЕЖДЕНИЕ] Не удалось прочитать Excel: {e}")
+
+# Проверка, что хоть что-то загрузилось
+if not sobps_database.strip():
+    sobps_database = "Контекст пуст. Загрузите реальные PDF или Excel файлы в папку проекта."
+
+
+def ask_sobps_assistant(user_question):
+    system_instruction = (
+        "Ты — интеллектуальный ассистент.\n"
+        "Отвечай на вопросы строго на основе предоставленного ниже КОНТЕКСТА.\n"
+        "Контекст собран из PDF-документов и Excel-таблиц.\n"
+        "Если в контексте нет точного ответа, ответь ровно эту фразу: "
+        "'В базе знаний нет верифицированных данных по этому вопросу'.\n"
+        "Запрещено придумывать факты от себя. Обязательно указывай точный источник информации "
+        "(имя файла, страницу или лист и строку) в конце ответа."
+    )
+    
+    full_prompt = f"{system_instruction}\n\nОБЩИЙ КОНТЕКСТ ИЗ ФАЙЛОВ:\n{sobps_database}\n\nВопрос: {user_question}"
+    
+    response = giga.chat(full_prompt)
+    return response.choices[0].message.content
+
+
+print("\n=== АССИСТЕНТ ГОТОВ К РАБОТЕ ===")
+print("Для выхода из программы введите 'выход' или 'exit'\n")
+
+while True:
+    query = input("[Сотрудник]: ")
+    
+    if query.lower() in ['выход', 'exit', 'quit']:
+        print("[Система]: Работа завершена. Всего доброго!")
+        break
+        
+    if not query.strip():
+        continue
+        
+    print("[ИИ-Ассистент]: Запрос обрабатывается...")
+    try:
+        answer = ask_sobps_assistant(query)
+        print(f"[ИИ-Ассистент]: {answer}\n")
+    except Exception as e:
+        print(f"[ОШИБКА ИИ]: Не удалось получить ответ. Причина: {e}\n")
