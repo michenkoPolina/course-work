@@ -1,15 +1,14 @@
 import os
-import openpyxl  # Добавлено для Excel
+import openpyxl  
 from pypdf import PdfReader
 from gigachat import GigaChat
 
-# Подключение к Сбер GigaChat
+# Подключение к Сбер 
 AUTH_TOKEN = "MDE5ZmE4ZDItZWU0My03NTc5LWE2M2UtMDJmNGNhMjU2OGU2OjAxY2RiOWFkLWVlNDctNDg2NC1hNzFkLWNhODBkYTZhOWNlOQ=="
 giga = GigaChat(credentials=AUTH_TOKEN, verify_ssl_certs=False)
 
 print("[SUCCESS] Система готова к чтению файлов!")
 
-# 1. Функция чтения PDF (осталась без изменений)
 def load_text_from_pdf(file_path):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Файл '{file_path}' не найден.")
@@ -21,7 +20,6 @@ def load_text_from_pdf(file_path):
             full_text += f"\n[Страница {page_num} файла {file_path}]:\n" + page_text
     return full_text
 
-# 2. Новая функция чтения Excel
 def load_text_from_excel(file_path):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Файл '{file_path}' не найден.")
@@ -35,11 +33,11 @@ def load_text_from_excel(file_path):
                 full_text += f"Строка {row_idx}: {' | '.join(row_data)}\n"
     return full_text
 
-# Имена ваших файлов в папке проекта
-PDF_NAME = "Pravila_bezopasnosti_povedeniya_pri_pozhare.pdf"
-EXCEL_NAME = "data.xlsx"  # Укажите здесь реальное имя вашего Excel-файла
 
-# Инициализируем общую базу знаний
+PDF_NAME = "Pravila_bezopasnosti_povedeniya_pri_pozhare.pdf"
+EXCEL_NAME = "data.xlsx" 
+
+# общая бд
 sobps_database = ""
 
 # Загружаем PDF
@@ -49,14 +47,12 @@ try:
 except Exception as e:
     print(f"[ПРЕДУПРЕЖДЕНИЕ] Не удалось прочитать PDF: {e}")
 
-# Загружаем Excel в ту же самую базу данных
 try:
     sobps_database += load_text_from_excel(EXCEL_NAME)
     print(f"[SUCCESS] Excel-файл '{EXCEL_NAME}' успешно загружен!")
 except Exception as e:
     print(f"[ПРЕДУПРЕЖДЕНИЕ] Не удалось прочитать Excel: {e}")
 
-# Проверка, что хоть что-то загрузилось
 if not sobps_database.strip():
     sobps_database = "Контекст пуст. Загрузите реальные PDF или Excel файлы в папку проекта."
 
